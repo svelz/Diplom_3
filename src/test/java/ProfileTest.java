@@ -1,4 +1,5 @@
 import io.qameta.allure.Description;
+import io.qameta.allure.junit4.DisplayName;
 import org.junit.*;
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -46,6 +47,7 @@ public class ProfileTest {
     }
 
     @Test
+    @DisplayName("Переход в личный кабинет")
     @Description("Проверка перехода в личный кабинет")
     public void testNavigateToProfile() {
         WebElement personalAccountButton = wait.until(
@@ -61,6 +63,7 @@ public class ProfileTest {
     }
 
     @Test
+    @DisplayName("Переход из личного кабинета в конструктор")
     @Description("Проверка перехода из личного кабинета в конструктор")
     public void testNavigateFromProfileToConstructor() {
         WebElement personalAccountButton = wait.until(
@@ -81,6 +84,7 @@ public class ProfileTest {
     }
 
     @Test
+    @DisplayName("Переход в конструктор через логотип")
     @Description("Проверка перехода в конструктор через логотип")
     public void testNavigateFromProfileToConstructorViaLogo() {
         WebElement personalAccountButton = wait.until(

@@ -1,4 +1,5 @@
 import io.qameta.allure.Description;
+import io.qameta.allure.junit4.DisplayName;
 import org.junit.*;
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -47,6 +48,7 @@ public class LogoutTest {
     }
 
     @Test
+    @DisplayName("Выход из аккаунта")
     @Description("Проверка выхода пользователя из аккаунта")
     public void testLogout() {
         WebElement personalAccountButton = wait.until(

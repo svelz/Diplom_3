@@ -7,7 +7,6 @@ import org.openqa.selenium.WebDriver;
 public class AccountPage {
     private final WebDriver driver;
     private final By logoutButton = By.xpath("//button[text()='Выйти']");
-
     public AccountPage(WebDriver driver) {
         this.driver = driver;
     }

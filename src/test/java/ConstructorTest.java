@@ -4,61 +4,62 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import pageobjects.ConstructorPage;
 import pageobjects.WebDriverFactory;
+import api.Endpoints;
+
+import java.time.Duration;
 
 public class ConstructorTest {
     private WebDriver driver;
     private ConstructorPage constructorPage;
+    private WebDriverWait wait;
 
     @Before
     public void setUp() {
         driver = WebDriverFactory.createDriver(System.getProperty("browser", "chrome"));
-        driver.get("https://stellarburgers.nomoreparties.site");
+        driver.get(Endpoints.CONSTRUCTOR_URL);
         constructorPage = new ConstructorPage(driver);
+        wait = new WebDriverWait(driver, Duration.ofSeconds(5));
     }
 
     @After
     public void tearDown() {
-        driver.quit();
+        WebDriverFactory.closeDriver(driver);
     }
 
     @Test
-    @Description("Открытие страницы и переход в раздел 'Соусы', затем ожидание 1 секунду")
-    public void testNavigateToSauces() throws InterruptedException {
+    @DisplayName("Переход в раздел 'Соусы'")
+    @Description("Открытие страницы и переход в раздел 'Соусы'")
+    public void testNavigateToSauces() {
         constructorPage.clickSauces();
-        Thread.sleep(1000);
-        WebElement activeTab = driver.findElement(By.xpath("//div[contains(@class, 'tab_tab_type_current') and span[text()='Соусы']]"));
+        WebElement activeTab = wait.until(ExpectedConditions.visibilityOfElementLocated(ConstructorPage.saucesActiveTab));
         Assert.assertNotNull("Раздел 'Соусы' не стал активным!", activeTab);
     }
 
     @Test
     @DisplayName("Переход в раздел 'Начинки'")
-    @Description("Открытие страницы и переход в раздел 'Начинки', затем ожидание 1 секунду")
-    public void testNavigateToFillings() throws InterruptedException {
+    @Description("Открытие страницы и переход в раздел 'Начинки'")
+    public void testNavigateToFillings() {
         constructorPage.clickFillings();
-        Thread.sleep(1000);
-        WebElement activeTab = driver.findElement(By.xpath("//div[contains(@class, 'tab_tab_type_current') and span[text()='Начинки']]"));
+        WebElement activeTab = wait.until(ExpectedConditions.visibilityOfElementLocated(ConstructorPage.fillingsActiveTab));
         Assert.assertNotNull("Раздел 'Начинки' не стал активным!", activeTab);
     }
 
     @Test
     @DisplayName("Переход в раздел 'Начинки', затем 'Булки'")
-    @Description("Открытие страницы, переход в 'Начинки', ожидание 1 секунду, затем в 'Булки', ожидание 1 секунду")
-    public void testNavigateToFillingsThenBuns() throws InterruptedException {
+    @Description("Открытие страницы, переход в 'Начинки', затем в 'Булки'")
+    public void testNavigateToFillingsThenBuns() {
         constructorPage.clickFillings();
-        Thread.sleep(1000);
-
-        WebElement fillingsTab = driver.findElement(By.xpath("//div[contains(@class, 'tab_tab_type_current') and span[text()='Начинки']]"));
+        WebElement fillingsTab = wait.until(ExpectedConditions.visibilityOfElementLocated(ConstructorPage.fillingsActiveTab));
         Assert.assertNotNull("Раздел 'Начинки' не стал активным!", fillingsTab);
 
         constructorPage.clickBuns();
-        Thread.sleep(1000);
-
-        WebElement bunsTab = driver.findElement(By.xpath("//div[contains(@class, 'tab_tab_type_current') and span[text()='Булки']]"));
+        WebElement bunsTab = wait.until(ExpectedConditions.visibilityOfElementLocated(ConstructorPage.bunsActiveTab));
         Assert.assertNotNull("Раздел 'Булки' не стал активным!", bunsTab);
     }
 }
