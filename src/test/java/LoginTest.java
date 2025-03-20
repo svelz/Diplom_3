@@ -1,3 +1,5 @@
+package tests;
+
 import io.qameta.allure.Description;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.Response;
@@ -11,6 +13,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import pageobjects.LoginPage;
 import pageobjects.WebDriverFactory;
 import api.Endpoints;
+import api.UserCredentials;
 import pageobjects.Locators;
 
 import java.time.Duration;
@@ -34,23 +37,27 @@ public class LoginTest {
         email = "test" + UUID.randomUUID().toString().substring(0, 8) + "@example.com";
         password = "Test@1234";
 
+        UserCredentials user = new UserCredentials(email, password, "TestUser");
+
         Response response = given()
                 .header("Content-Type", "application/json")
-                .body("{ \"email\": \"" + email + "\", \"password\": \"" + password + "\", \"name\": \"TestUser\" }")
+                .body(user)
                 .post(Endpoints.API_USER_CREATE)
                 .then()
                 .extract()
                 .response();
 
         Assert.assertEquals("Ошибка при создании пользователя", 200, response.statusCode());
+
         Response loginResponse = given()
                 .header("Content-Type", "application/json")
-                .body("{ \"email\": \"" + email + "\", \"password\": \"" + password + "\" }")
+                .body(new UserCredentials(email, password, null))
                 .post(Endpoints.API_USER_LOGIN)
                 .then()
                 .extract()
                 .response();
 
+        System.out.println("Ответ сервера при логине: " + loginResponse.body().asString());
         Assert.assertEquals("Ошибка при авторизации пользователя", 200, loginResponse.statusCode());
         accessToken = loginResponse.jsonPath().getString("accessToken");
     }
@@ -62,7 +69,6 @@ public class LoginTest {
                     .header("Authorization", accessToken)
                     .delete(Endpoints.API_USER_DELETE);
         }
-
         WebDriverFactory.closeDriver(driver);
     }
 
@@ -108,7 +114,6 @@ public class LoginTest {
     private void performLogin() {
         loginPage.enterEmail(email);
         loginPage.enterPassword(password);
-
         WebElement loginButton = wait.until(ExpectedConditions.elementToBeClickable(Locators.LOGIN_BUTTON));
 
         try {
@@ -126,7 +131,6 @@ public class LoginTest {
         }
 
         boolean isLoggedIn = driver.findElements(Locators.PERSONAL_ACCOUNT_BUTTON).size() > 0;
-
         Assert.assertTrue("Вход в аккаунт не подтверждён, но ошибки нет.", isLoggedIn);
         System.out.println("Авторизация выполнена успешно!");
     }

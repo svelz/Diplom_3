@@ -5,16 +5,16 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import pageobjects.RegisterPage;
 import pageobjects.WebDriverFactory;
 import api.Endpoints;
-
+import api.UserCredentials;
+import pageobjects.Locators;
+import java.time.Duration;
 import java.util.UUID;
-
 import static io.restassured.RestAssured.given;
 
 public class RegisterTest {
@@ -58,20 +58,23 @@ public class RegisterTest {
         registerPage.enterPassword(password);
         registerPage.clickRegisterButton();
 
-        WebDriverWait wait = new WebDriverWait(driver, java.time.Duration.ofSeconds(5));
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 
         boolean isLoginPage = wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("login"),
-                ExpectedConditions.presenceOfElementLocated(By.xpath("//h2[text()='Вход']"))
+                ExpectedConditions.presenceOfElementLocated(Locators.LOGIN_HEADER)
         ));
 
         System.out.println("Фактический URL после регистрации: " + driver.getCurrentUrl());
 
         Assert.assertTrue("Регистрация не удалась! Ожидался редирект на страницу логина.", isLoginPage);
 
+        // Создаем объект UserCredentials вместо JSON-строки
+        UserCredentials user = new UserCredentials(uniqueEmail, password, null);
+
         Response loginResponse = given()
                 .header("Content-Type", "application/json")
-                .body("{ \"email\": \"" + uniqueEmail + "\", \"password\": \"" + password + "\" }")
+                .body(user)
                 .post(Endpoints.API_USER_LOGIN)
                 .then()
                 .extract()

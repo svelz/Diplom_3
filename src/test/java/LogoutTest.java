@@ -7,6 +7,8 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import pageobjects.LoginPage;
 import pageobjects.AccountPage;
 import pageobjects.WebDriverFactory;
+import api.Endpoints;
+import pageobjects.Locators;
 import java.time.Duration;
 
 public class LogoutTest {
@@ -18,33 +20,32 @@ public class LogoutTest {
     @Before
     public void setUp() {
         driver = WebDriverFactory.createDriver(System.getProperty("browser", "chrome"));
-        driver.get("https://stellarburgers.nomoreparties.site/login");
-
+        driver.get(Endpoints.LOGIN_URL);
         wait = new WebDriverWait(driver, Duration.ofSeconds(3));
         loginPage = new LoginPage(driver);
         accountPage = new AccountPage(driver);
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//h2[text()='Вход']")));
+
+        wait.until(ExpectedConditions.visibilityOfElementLocated(Locators.EMAIL_FIELD));
+
         loginPage.enterEmail("testirovanieui@yandex.ru");
         loginPage.enterPassword("password");
 
-        WebElement loginButton = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//button[text()='Войти']")));
+        WebElement loginButton = wait.until(ExpectedConditions.elementToBeClickable(Locators.LOGIN_BUTTON));
         loginButton.click();
 
         boolean isLoggedIn = wait.until(ExpectedConditions.or(
-                ExpectedConditions.presenceOfElementLocated(By.xpath("//a[contains(@href, '/account')]")),
-                ExpectedConditions.presenceOfElementLocated(By.xpath("//button[text()='Выход']"))
+                ExpectedConditions.presenceOfElementLocated(Locators.PERSONAL_ACCOUNT_BUTTON),
+                ExpectedConditions.presenceOfElementLocated(Locators.LOGIN_BUTTON)
         )) != null;
 
-        System.out.println(" Текущий URL после входа: " + driver.getCurrentUrl());
-
-        Assert.assertTrue(" Вход не выполнен!", isLoggedIn);
+        System.out.println("Текущий URL после входа: " + driver.getCurrentUrl());
+        Assert.assertTrue("Вход не выполнен!", isLoggedIn);
     }
 
     @After
     public void tearDown() {
-        if (driver != null) {
-            driver.quit();
-        }
+        Endpoints.deleteUser("testirovanieui@yandex.ru");
+        WebDriverFactory.closeDriver(driver);
     }
 
     @Test
@@ -52,16 +53,17 @@ public class LogoutTest {
     @Description("Проверка выхода пользователя из аккаунта")
     public void testLogout() {
         WebElement personalAccountButton = wait.until(
-                ExpectedConditions.elementToBeClickable(By.xpath("//a[contains(@href, '/account')]"))
+                ExpectedConditions.elementToBeClickable(Locators.PERSONAL_ACCOUNT_BUTTON)
         );
         personalAccountButton.click();
 
         WebElement logoutButton = wait.until(
-                ExpectedConditions.elementToBeClickable(By.xpath("//button[text()='Выход']"))
+                ExpectedConditions.elementToBeClickable(Locators.LOGOUT_BUTTON)
         );
         logoutButton.click();
-        boolean isLoggedOut = wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//h2[text()='Вход']"))) != null;
-        System.out.println(" Текущий URL после выхода: " + driver.getCurrentUrl());
-        Assert.assertTrue("  Выход не выполнен!", isLoggedOut);
+
+        boolean isLoggedOut = wait.until(ExpectedConditions.presenceOfElementLocated(Locators.LOGIN_HEADER)) != null;
+        System.out.println("Текущий URL после выхода: " + driver.getCurrentUrl());
+        Assert.assertTrue("Выход не выполнен!", isLoggedOut);
     }
 }
