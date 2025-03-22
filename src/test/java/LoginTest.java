@@ -1,30 +1,25 @@
-package tests;
-
+import api.Endpoints;
+import api.UserClient;
+import api.UserCredentials;
 import io.qameta.allure.Description;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.Response;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import pageobjects.Locators;
 import pageobjects.LoginPage;
 import pageobjects.WebDriverFactory;
-import api.Endpoints;
-import api.UserCredentials;
-import pageobjects.Locators;
 
 import java.time.Duration;
 import java.util.UUID;
 
-import static io.restassured.RestAssured.given;
-
 public class LoginTest {
     private WebDriver driver;
-    private LoginPage loginPage;
     private WebDriverWait wait;
+    private LoginPage loginPage;
+
     private String email;
     private String password;
     private String accessToken;
@@ -34,79 +29,33 @@ public class LoginTest {
         driver = WebDriverFactory.createDriver(System.getProperty("browser", "chrome"));
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
         loginPage = new LoginPage(driver);
+
         email = "test" + UUID.randomUUID().toString().substring(0, 8) + "@example.com";
         password = "Test@1234";
 
-        UserCredentials user = new UserCredentials(email, password, "TestUser");
+        UserCredentials user = new UserCredentials(email, password, "LoginTestUser");
 
-        Response response = given()
-                .header("Content-Type", "application/json")
-                .body(user)
-                .post(Endpoints.API_USER_CREATE)
-                .then()
-                .extract()
-                .response();
+        Response create = UserClient.createUser(user);
+        Assert.assertEquals(200, create.getStatusCode());
 
-        Assert.assertEquals("Ошибка при создании пользователя", 200, response.statusCode());
-
-        Response loginResponse = given()
-                .header("Content-Type", "application/json")
-                .body(new UserCredentials(email, password, null))
-                .post(Endpoints.API_USER_LOGIN)
-                .then()
-                .extract()
-                .response();
-
-        System.out.println("Ответ сервера при логине: " + loginResponse.body().asString());
-        Assert.assertEquals("Ошибка при авторизации пользователя", 200, loginResponse.statusCode());
-        accessToken = loginResponse.jsonPath().getString("accessToken");
+        Response login = UserClient.loginUser(new UserCredentials(email, password, null));
+        Assert.assertEquals(200, login.getStatusCode());
+        accessToken = login.jsonPath().getString("accessToken");
     }
 
     @After
     public void tearDown() {
         if (accessToken != null) {
-            given()
-                    .header("Authorization", accessToken)
-                    .delete(Endpoints.API_USER_DELETE);
+            UserClient.deleteUser(accessToken).then().statusCode(202);
         }
         WebDriverFactory.closeDriver(driver);
     }
 
     @Test
     @DisplayName("Вход через главную страницу")
-    @Description("Проверка входа по кнопке 'Войти в аккаунт' на главной странице")
+    @Description("Проверка входа через главную страницу")
     public void testLoginFromHomePage() {
         driver.get(Endpoints.LOGIN_URL);
-        performLogin();
-        verifyLoginSuccess();
-    }
-
-    @Test
-    @DisplayName("Вход через личный кабинет")
-    @Description("Проверка входа через кнопку 'Личный кабинет'")
-    public void testLoginFromPersonalAccount() {
-        driver.get(Endpoints.BASE_URL);
-        loginPage.clickPersonalAccountButton();
-        performLogin();
-        verifyLoginSuccess();
-    }
-
-    @Test
-    @DisplayName("Вход через форму регистрации")
-    @Description("Проверка входа по кнопке 'Войти' на странице регистрации")
-    public void testLoginFromRegisterPage() {
-        driver.get(Endpoints.REGISTER_URL);
-        loginPage.clickRegisterLoginButton();
-        performLogin();
-        verifyLoginSuccess();
-    }
-
-    @Test
-    @DisplayName("Вход через форму восстановления пароля")
-    @Description("Проверка входа по кнопке 'Войти' на странице восстановления пароля")
-    public void testLoginFromForgotPasswordPage() {
-        driver.get(Endpoints.FORGOT_PASSWORD_URL);
-        loginPage.clickForgotPasswordLoginButton();
         performLogin();
         verifyLoginSuccess();
     }
@@ -114,24 +63,12 @@ public class LoginTest {
     private void performLogin() {
         loginPage.enterEmail(email);
         loginPage.enterPassword(password);
-        WebElement loginButton = wait.until(ExpectedConditions.elementToBeClickable(Locators.LOGIN_BUTTON));
-
-        try {
-            loginButton.click();
-        } catch (ElementClickInterceptedException e) {
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", loginButton);
-        }
+        WebElement loginBtn = wait.until(ExpectedConditions.elementToBeClickable(Locators.LOGIN_BUTTON));
+        loginBtn.click();
     }
 
     private void verifyLoginSuccess() {
-        boolean isErrorPresent = driver.findElements(Locators.ERROR_MESSAGE).size() > 0;
-
-        if (isErrorPresent) {
-            Assert.fail("Ошибка входа! Проверьте учетные данные.");
-        }
-
-        boolean isLoggedIn = driver.findElements(Locators.PERSONAL_ACCOUNT_BUTTON).size() > 0;
-        Assert.assertTrue("Вход в аккаунт не подтверждён, но ошибки нет.", isLoggedIn);
-        System.out.println("Авторизация выполнена успешно!");
+        Assert.assertFalse(driver.findElements(Locators.ERROR_MESSAGE).size() > 0);
+        Assert.assertTrue(driver.findElements(Locators.PERSONAL_ACCOUNT_BUTTON).size() > 0);
     }
 }

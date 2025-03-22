@@ -1,99 +1,76 @@
+import api.Endpoints;
+import api.UserClient;
+import api.UserCredentials;
 import io.qameta.allure.Description;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.Response;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.openqa.selenium.WebDriver;
+import org.junit.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import pageobjects.Locators;
 import pageobjects.RegisterPage;
 import pageobjects.WebDriverFactory;
-import api.Endpoints;
-import api.UserCredentials;
-import pageobjects.Locators;
+import org.openqa.selenium.WebDriver;
+
 import java.time.Duration;
 import java.util.UUID;
-import static io.restassured.RestAssured.given;
 
 public class RegisterTest {
     private WebDriver driver;
+    private WebDriverWait wait;
     private RegisterPage registerPage;
-    private String uniqueEmail;
-    private String password = "Test@1234";
+    private String email;
+    private final String password = "Test@1234";
     private String accessToken;
 
     @Before
     public void setUp() {
         driver = WebDriverFactory.createDriver(System.getProperty("browser", "chrome"));
+        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
         driver.get(Endpoints.REGISTER_URL);
-        uniqueEmail = "test" + UUID.randomUUID().toString().substring(0, 8) + "@example.com";
-        System.out.println("Используем email: " + uniqueEmail);
-
         registerPage = new RegisterPage(driver);
+        email = "test" + UUID.randomUUID().toString().substring(0, 8) + "@example.com";
     }
 
     @After
     public void tearDown() {
         if (accessToken != null) {
-            Response deleteResponse = given()
-                    .header("Authorization", accessToken)
-                    .delete(Endpoints.API_USER_DELETE);
-
-            Assert.assertEquals("Ошибка при удалении пользователя!", 202, deleteResponse.statusCode());
+            UserClient.deleteUser(accessToken).then().statusCode(202);
         }
-
-        if (driver != null) {
-            driver.quit();
-        }
+        WebDriverFactory.closeDriver(driver);
     }
 
     @Test
     @DisplayName("Успешная регистрация нового пользователя")
-    @Description("Проверка успешной регистрации нового пользователя с уникальным email")
+    @Description("Регистрация нового пользователя через UI")
     public void testSuccessfulRegistration() {
-        registerPage.enterName("Тестовый Пользователь");
-        registerPage.enterEmail(uniqueEmail);
+        registerPage.enterName("Test Name");
+        registerPage.enterEmail(email);
         registerPage.enterPassword(password);
         registerPage.clickRegisterButton();
 
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
-
-        boolean isLoginPage = wait.until(ExpectedConditions.or(
+        boolean redirected = wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("login"),
                 ExpectedConditions.presenceOfElementLocated(Locators.LOGIN_HEADER)
-        ));
+        )) != null;
 
-        System.out.println("Фактический URL после регистрации: " + driver.getCurrentUrl());
+        Assert.assertTrue("Не произошло перенаправление на логин", redirected);
 
-        Assert.assertTrue("Регистрация не удалась! Ожидался редирект на страницу логина.", isLoginPage);
-
-        // Создаем объект UserCredentials вместо JSON-строки
-        UserCredentials user = new UserCredentials(uniqueEmail, password, null);
-
-        Response loginResponse = given()
-                .header("Content-Type", "application/json")
-                .body(user)
-                .post(Endpoints.API_USER_LOGIN)
-                .then()
-                .extract()
-                .response();
-
-        Assert.assertEquals("Ошибка при авторизации пользователя", 200, loginResponse.statusCode());
-        accessToken = loginResponse.jsonPath().getString("accessToken");
+        Response login = UserClient.loginUser(new UserCredentials(email, password, null));
+        Assert.assertEquals(200, login.getStatusCode());
+        accessToken = login.jsonPath().getString("accessToken");
     }
 
     @Test
-    @DisplayName("Ошибка при вводе короткого пароля")
-    @Description("Проверка обработки ошибки при регистрации с коротким паролем")
+    @DisplayName("Ошибка при коротком пароле")
+    @Description("Регистрация с некорректным паролем")
     public void testRegistrationWithShortPassword() {
-        registerPage.enterName("shortpassuser");
-        registerPage.enterEmail("shortpass@example.com");
-        registerPage.enterPassword("12345");
+        registerPage.enterName("Short Pass");
+        registerPage.enterEmail("short@example.com");
+        registerPage.enterPassword("123");
         registerPage.clickRegisterButton();
 
-        String errorMessage = registerPage.getPasswordErrorMessage();
-        Assert.assertEquals("Некорректное сообщение об ошибке!", "Некорректный пароль", errorMessage);
+        String error = registerPage.getPasswordErrorMessage();
+        Assert.assertEquals("Некорректный пароль", error);
     }
 }

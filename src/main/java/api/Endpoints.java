@@ -10,6 +10,7 @@ public class Endpoints {
     public static final String API_USER_CREATE = BASE_URL + "/api/auth/register";
     public static final String API_USER_DELETE = BASE_URL + "/api/auth/user";
     public static final String API_USER_LOGIN = BASE_URL + "/api/auth/login";
+
     public static void deleteUser(String email) {
         System.out.println("Удалён пользователь: " + email);
     }
